@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <title>A2UI Restaurant Finder</title>
+    <style>
+      :root {
+        --primary-color: #007bff;
+        --bg-color: #f0f2f5;
+        --surface-color: #ffffff;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: var(--bg-color);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* Header & Status */
+      #status-bar {
+        padding: 10px 20px;
+        background: white;
+        border-bottom: 1px solid #ddd;
+        font-size: 13px;
+        color: #666;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      /* Main Container */
+      #ui-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+        width: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      /* Input Area */
+      #input-area {
+        padding: 15px 20px;
+        background: white;
+        border-top: 1px solid #ddd;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+      #input-area-inner {
+        max-width: 600px;
+        width: 100%;
+        display: flex;
+        gap: 10px;
+      }
+      input {
+        flex: 1;
+        padding: 12px 20px;
+        border-radius: 24px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+        outline: none;
+      }
+      button#send-btn {
+        padding: 10px 25px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 24px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button:disabled {
+        background: #ccc;
+      }
+
+      /* A2UI Components */
+      .a2ui-surface {
+        width: 100%;
+        min-height: 50px;
+        animation: fadeIn 0.3s ease;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .a2ui-column {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+        min-width: 0;
+      }
+      .a2ui-row {
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        width: 100%;
+        align-items: flex-start;
+        min-width: 0;
+      }
+
+      .a2ui-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        border: 1px solid #eee;
+        margin-bottom: 8px;
+      }
+
+      .a2ui-text {
+        margin: 0;
+        color: #1c1e21;
+        word-wrap: break-word;
+      }
+      .a2ui-text-h1 {
+        font-size: 28px;
+        font-weight: 800;
+        margin-bottom: 16px;
+        border-bottom: 3px solid var(--primary-color);
+        padding-bottom: 8px;
+        display: block;
+      }
+      .a2ui-text-h2 {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      .a2ui-text-h3 {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .a2ui-text-body {
+        font-size: 15px;
+        color: #4b4f56;
+      }
+
+      /* Link Style */
+      .a2ui-text a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 600;
+        border-bottom: 1px solid transparent;
+      }
+      .a2ui-text a:hover {
+        border-bottom: 1px solid var(--primary-color);
+      }
+
+      .a2ui-image {
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+        border-radius: 8px;
+        display: block;
+        background: #f0f2f5;
+        min-height: 150px;
+      }
+
+      .a2ui-button {
+        padding: 10px 20px;
+        background: #ebedf0;
+        color: #050505;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+      .a2ui-button:hover {
+        background: #e4e6e9;
+      }
+      .a2ui-button-primary {
+        background: var(--primary-color);
+        color: white;
+      }
+      .a2ui-button-primary:hover {
+        filter: brightness(0.9);
+      }
+
+      .a2ui-input-group {
+        margin-bottom: 12px;
+      }
+      .a2ui-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #555;
+        display: block;
+        margin-bottom: 5px;
+      }
+      .a2ui-textfield {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 15px;
+        box-sizing: border-box;
+      }
+      .a2ui-textfield:focus {
+        border-color: var(--primary-color);
+        outline: none;
+      }
+      .render-error {
+        color: red;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="status-bar">
+      <span id="status-text">Ready</span>
+      <span id="loading-indicator" style="display: none">Processing...</span>
+    </div>
+
+    <div id="ui-container">
+      <div
+        id="welcome-msg"
+        style="text-align: center; color: #888; margin-top: 50px"
+      >
+        <h3>Restaurant Finder</h3>
+        <p>Try: "Find 3 Chinese restaurants in New York"</p>
+      </div>
+    </div>
+
+    <div id="input-area">
+      <div id="input-area-inner">
+        <input
+          type="text"
+          id="user-input"
+          placeholder="Type message..."
+          value="Find 3 Chinese restaurants in New York"
+        />
+        <button id="send-btn" onclick="handleSend()">Send</button>
+      </div>
+    </div>
+
+    <script>
+      /**
+       * Global application state tracking surfaces and active views.
+       * @type {{surfaces: Object<string, Object>, activeSurfaceId: ?string}}
+       */
+      let appState = { surfaces: {}, activeSurfaceId: null };
+
+      /**
+       * Stack to store historical app states for navigation.
+       * @type {Array<Object>}
+       */
+      const historyStack = [];
+
+      /**
+       * Saves the current app state into the history stack for later restoration.
+       */
+      function saveHistory() {
+        historyStack.push(JSON.parse(JSON.stringify(appState)));
+      }
+
+      /**
+       * Restores the previous app state from the history stack and triggers a re-render.
+       */
+      function restoreHistory() {
+        if (historyStack.length > 0) {
+          appState = historyStack.pop();
+          renderAppState();
+        }
+      }
+
+      /**
+       * Processes incoming A2UI messages to update the application state.
+       * @param {Array<Object>} messages - The array of UI update instructions from the server.
+       */
+      function renderA2UiMessages(messages) {
+        const welcome = document.getElementById("welcome-msg");
+        if (welcome) welcome.style.display = "none";
+
+        messages.forEach((msg) => {
+          const surfaceId =
+            msg.surfaceUpdate?.surfaceId ||
+            msg.dataModelUpdate?.surfaceId ||
+            msg.beginRendering?.surfaceId ||
+            "default";
+          appState.activeSurfaceId = surfaceId;
+
+          if (!appState.surfaces[surfaceId]) {
+            appState.surfaces[surfaceId] = {
+              data: {},
+              components: {},
+              rootId: null,
+            };
+          }
+          const state = appState.surfaces[surfaceId];
+
+          if (msg.beginRendering) {
+            state.rootId = msg.beginRendering.root;
+            if (msg.beginRendering.styles?.primaryColor) {
+              document.documentElement.style.setProperty(
+                "--primary-color",
+                msg.beginRendering.styles.primaryColor
+              );
+            }
+          }
+          if (msg.dataModelUpdate && msg.dataModelUpdate.contents) {
+            msg.dataModelUpdate.contents.forEach((entry) => {
+              state.data[entry.key] = parseValue(entry);
+            });
+          }
+          if (msg.surfaceUpdate) {
+            msg.surfaceUpdate.components.forEach(
+              (c) => (state.components[c.id] = c)
+            );
+            if (!state.rootId && msg.surfaceUpdate.components.length > 0) {
+              state.rootId = msg.surfaceUpdate.components[0].id;
+            }
+          }
+        });
+        renderAppState();
+      }
+
+      /**
+       * Renders the active surface based on the current app state into the UI container.
+       */
+      function renderAppState() {
+        const container = document.getElementById("ui-container");
+        container.innerHTML = "";
+
+        const sid = appState.activeSurfaceId;
+        if (!sid) return;
+
+        const s = appState.surfaces[sid];
+        if (s && s.rootId) {
+          const el = renderComponent(sid, s.rootId, "");
+          if (el) {
+            const surfaceDiv = document.createElement("div");
+            surfaceDiv.className = "a2ui-surface";
+            surfaceDiv.appendChild(el);
+            container.appendChild(surfaceDiv);
+          }
+        }
+      }
+
+      /**
+       * Parses plain text to escape HTML and convert Markdown-style links or URLs to anchors.
+       * @param {string} text - The input string to parse.
+       * @returns {string} The sanitized and linkified HTML string.
+       */
+      function parseMarkdownText(text) {
+        if (!text) return "";
+        let html = String(text)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        html = html.replace(
+          /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+          '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+        );
+        const urlPattern = /(https?:\/\/[^\s]+)/;
+        if (!html.includes("<a ") && urlPattern.test(html)) {
+          html = html.replace(
+            urlPattern,
+            (match) =>
+              `<a href="${match}" target="_blank" rel="noopener noreferrer">More Info</a>`
+          );
+        }
+        return html;
+      }
+
+      /**
+       * Recursively parses an A2UI data entry into a standard JavaScript value/object.
+       * @param {Object} entry - The data entry containing valueString, valueNumber, etc.
+       * @returns {*} The converted JavaScript literal or object.
+       */
+      function parseValue(entry) {
+        if (!entry || typeof entry !== "object") return null;
+        if (entry.valueString !== undefined) return entry.valueString;
+        if (entry.valueNumber !== undefined) return entry.valueNumber;
+        if (entry.valueBoolean !== undefined) return entry.valueBoolean;
+
+        if (entry.valueMap && Array.isArray(entry.valueMap)) {
+          const isStandardMap = entry.valueMap.some(
+            (v) => v && typeof v === "object" && "key" in v
+          );
+          if (isStandardMap) {
+            const isListLike = entry.valueMap.every(
+              (v, i) =>
+                String(v.key) === String(i) || String(v.key).startsWith("item")
+            );
+            if (isListLike) return entry.valueMap.map((v) => parseValue(v));
+            const obj = {};
+            entry.valueMap.forEach((v) => {
+              if (v.key) obj[v.key] = parseValue(v);
+            });
+            return obj;
+          } else {
+            return entry.valueMap.map((v) => {
+              const parsed = {};
+              Object.keys(v).forEach((k) => {
+                parsed[k] = parseValue(v[k]);
+              });
+              return parsed;
+            });
+          }
+        }
+        return null;
+      }
+
+      /**
+       * Resolves a value from the surface data model using a path string.
+       * @param {string} sid - The Surface ID.
+       * @param {string} path - The slash-delimited path to the data.
+       * @returns {*} The resolved data value or null.
+       */
+      function resolvePath(sid, path) {
+        if (!path) return null;
+        const p = path.startsWith("/") ? path.substring(1) : path;
+        const parts = p.split("/");
+        let cur = appState.surfaces[sid].data;
+        for (const part of parts) {
+          if (cur == null) return null;
+          if (Array.isArray(cur) && !isNaN(parseInt(part))) {
+            cur = cur[parseInt(part)];
+          } else {
+            cur = cur[part];
+          }
+        }
+        return cur;
+      }
+
+      /**
+       * Joins a base path and an append path, ensuring correct slash separation.
+       * @param {string} base - The base path.
+       * @param {string} append - The path to append.
+       * @returns {string} The joined path string.
+       */
+      function joinPath(base, append) {
+        if (!base) return append;
+        if (append.startsWith("/")) return append;
+        const b = base.endsWith("/") ? base.slice(0, -1) : base;
+        return `${b}/${append}`;
+      }
+
+      /**
+       * Factory function to create and configure DOM elements based on A2UI component definitions.
+       * @param {string} sid - The Surface ID.
+       * @param {string} cid - The Component ID.
+       * @param {string} ctx - The data binding context path.
+       * @returns {HTMLElement} The constructed DOM element.
+       */
+      function renderComponent(sid, cid, ctx) {
+        const s = appState.surfaces[sid];
+        const def = s.components[cid];
+        if (!def) return null;
+        const type = Object.keys(def.component)[0];
+        const props = def.component[type];
+        const el = document.createElement("div");
+        if (def.weight) el.style.flex = def.weight;
+
+        try {
+          switch (type) {
+            case "Column":
+              el.className = "a2ui-column";
+              renderChildren(sid, props.children, el, ctx);
+              break;
+            case "Row":
+              el.className = "a2ui-row";
+              if (props.alignment) el.style.alignItems = props.alignment;
+              renderChildren(sid, props.children, el, ctx);
+              break;
+            case "List":
+              el.className =
+                props.direction === "horizontal" ? "a2ui-row" : "a2ui-column";
+              renderChildren(sid, props.children, el, ctx);
+              break;
+            case "Card":
+              el.className = "a2ui-card";
+              if (props.child) {
+                const c = renderComponent(sid, props.child, ctx);
+                if (c) el.appendChild(c);
+              }
+              break;
+            case "Text":
+              const h = props.usageHint || "body";
+              el.className = `a2ui-text a2ui-text-${h}`;
+              let txt =
+                props.text.literalString ||
+                resolvePath(sid, joinPath(ctx, props.text.path));
+              el.innerHTML = parseMarkdownText(txt);
+              break;
+            case "Image":
+              const img = document.createElement("img");
+              img.className = "a2ui-image";
+              let url =
+                props.url.literalString ||
+                resolvePath(sid, joinPath(ctx, props.url.path));
+              img.src =
+                url || "https://via.placeholder.com/400x200?text=No+Image";
+              el.appendChild(img);
+              break;
+            case "Button":
+              const btn = document.createElement("button");
+              btn.className = "a2ui-button";
+              if (props.primary) btn.classList.add("a2ui-button-primary");
+              if (props.child) {
+                const lbl = renderComponent(sid, props.child, ctx);
+                if (lbl) btn.textContent = lbl.textContent;
+              }
+              btn.onclick = () => {
+                if (props.action?.name === "book_restaurant") {
+                  saveHistory();
+                  const c = props.action.context || [];
+                  const g = (k) => {
+                    const f = c.find((x) => x.key === k);
+                    return f?.value?.path
+                      ? resolvePath(sid, joinPath(ctx, f.value.path))
+                      : "";
+                  };
+                  const d = {
+                    restaurantName: g("restaurantName"),
+                    imageUrl: g("imageUrl"),
+                    address: g("address"),
+                  };
+                  sendMessage(
+                    `DETAILS_JSON:${JSON.stringify(d)}`,
+                    "Loading Form..."
+                  );
+                } else if (props.action?.name === "submit_booking") {
+                  const inputs = document.querySelectorAll(".a2ui-input-field");
+                  let details = [];
+                  inputs.forEach((i) =>
+                    details.push(`${i.dataset.label}: ${i.value}`)
+                  );
+                  const rName =
+                    resolvePath(sid, "restaurantName") || "the restaurant";
+                  sendMessage(
+                    `User submitted a booking for ${rName}. Details: ${details.join(
+                      ", "
+                    )}`,
+                    "Submitting..."
+                  );
+                } else if (props.action?.name === "back_to_list") {
+                  restoreHistory();
+                }
+              };
+              el.appendChild(btn);
+              break;
+            case "TextField":
+              const divT = document.createElement("div");
+              divT.className = "a2ui-input-group";
+              const lblT = document.createElement("label");
+              lblT.className = "a2ui-label";
+              lblT.textContent = props.label.literalString || "";
+              const inpT = document.createElement("input");
+              inpT.className = "a2ui-textfield a2ui-input-field";
+              inpT.dataset.label = lblT.textContent;
+              if (props.text?.path)
+                inpT.value =
+                  resolvePath(sid, joinPath(ctx, props.text.path)) || "";
+              divT.appendChild(lblT);
+              divT.appendChild(inpT);
+              return divT;
+            case "DateTimeInput":
+              const divD = document.createElement("div");
+              divD.className = "a2ui-input-group";
+              const lblD = document.createElement("label");
+              lblD.className = "a2ui-label";
+              lblD.textContent = props.label.literalString || "Date & Time";
+              const inpD = document.createElement("input");
+              inpD.className = "a2ui-textfield a2ui-input-field";
+              inpD.type = "datetime-local";
+              inpD.dataset.label = lblD.textContent;
+              divD.appendChild(lblD);
+              divD.appendChild(inpD);
+              return divD;
+          }
+        } catch (e) {
+          el.innerHTML = `<span class="render-error">Error: ${type}</span>`;
+        }
+        return el;
+      }
+
+      /**
+       * Renders child components, handling both explicit lists and template-based loops.
+       * @param {string} sid - The Surface ID.
+       * @param {Object} ch - The children definition object.
+       * @param {HTMLElement} el - The parent DOM element to append children to.
+       * @param {string} ctx - The data binding context path.
+       */
+      function renderChildren(sid, ch, el, ctx) {
+        if (!ch) return;
+        if (ch.explicitList) {
+          ch.explicitList.forEach((id) => {
+            const c = renderComponent(sid, id, ctx);
+            if (c) el.appendChild(c);
+          });
+        }
+        if (ch.template) {
+          const tmpl = ch.template;
+          const bindingPath = joinPath(ctx, tmpl.dataBinding);
+          const listData = resolvePath(sid, bindingPath);
+          if (
+            listData &&
+            (Array.isArray(listData) || typeof listData === "object")
+          ) {
+            const keys = Array.isArray(listData)
+              ? listData.map((_, i) => i.toString())
+              : Object.keys(listData);
+            keys.forEach((key) => {
+              const itemContext = joinPath(bindingPath, key);
+              const c = renderComponent(sid, tmpl.componentId, itemContext);
+              if (c) el.appendChild(c);
+            });
+          }
+        }
+      }
+
+      /**
+       * Handles the click event for the main send button.
+       */
+      function handleSend() {
+        const i = document.getElementById("user-input");
+        if (!i.value) return;
+        saveHistory();
+        sendMessage(i.value, "Searching...");
+        i.value = "";
+      }
+
+      /**
+       * Communicates with the Google Apps Script backend and updates the UI based on the response.
+       * @param {string} q - The user's query or action payload.
+       * @param {string} s - The status message to display during the request.
+       */
+      function sendMessage(q, s) {
+        const i = document.getElementById("user-input");
+        const b = document.getElementById("send-btn");
+        const st = document.getElementById("status-text");
+        const l = document.getElementById("loading-indicator");
+        i.disabled = b.disabled = true;
+        st.textContent = s;
+        l.style.display = "inline";
+        google.script.run
+          .withSuccessHandler((r) => {
+            i.disabled = b.disabled = false;
+            st.textContent = "Ready";
+            l.style.display = "none";
+            if (r.uiJson) renderA2UiMessages(r.uiJson);
+            else if (r.text)
+              document.getElementById(
+                "ui-container"
+              ).innerHTML = `<div class="a2ui-card"><p>${r.text}</p></div>`;
+          })
+          .withFailureHandler((e) => {
+            alert("Error: " + e.message);
+            i.disabled = b.disabled = false;
+            st.textContent = "Error";
+            l.style.display = "none";
+          })
+          .processUserRequest(q);
+      }
+    </script>
+  </body>
+</html>
