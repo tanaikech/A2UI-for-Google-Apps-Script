@@ -111,9 +111,9 @@ function executeGetRestaurants(cuisine = null, location = null, count = null) {
  */
 function convertFilenameToImageUrl(allRestaurants) {
   const folder = DriveApp.getFolderById("1vchEpcPfMaC0f2CTcAS3ofL7TeDBl27D");
-  if (!folder.hasNext()) {
-    throw new Error("No folder of a2ui-sample-images.");
-  }
+  // if (!folder.hasNext()) {
+  //   throw new Error("No folder of a2ui-sample-images.");
+  // }
   const files = folder.next().searchFiles("mimeType contains 'image'");
   const imageFiles = {};
   while (files.hasNext()) {
