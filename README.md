@@ -117,7 +117,7 @@ This sample demonstrates "Bringing A2UI to Google Workspace". It runs inside a m
    - _"Show me events for Jan 17-20"_
    - The agent searches the "data" sheet for events, displays them in a checkbox list, and allows you to **add selected events to your Google Calendar**.
 
-**Source Code:** [sample/A2UI-Google-Sheets](sample/A2UI-Google-Sheets)
+**Source Code:** [sample/A2UI-Google-Sheets](https://github.com/tanaikech/A2UI-for-Google-Apps-Script/tree/master/samples/A2UI-Google-Sheets)
 
 ---
 
