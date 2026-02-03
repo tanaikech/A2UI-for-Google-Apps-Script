@@ -1,0 +1,806 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top" />
+    <title>Drive Task Agent</title>
+    <style>
+      :root {
+        --primary-color: #007bff;
+        --bg-color: #f0f2f5;
+        --chat-bg: #ffffff;
+        --text-color: #1c1e21;
+        --success-color: #28a745;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        background: var(--bg-color);
+        overflow: hidden;
+      }
+
+      /* Loading Overlay */
+      #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        z-index: 2000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--primary-color);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .loading-text {
+        margin-top: 15px;
+        color: #555;
+        font-weight: 600;
+      }
+
+      /* Main Chat Scroll Area */
+      #chat-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        scroll-behavior: smooth;
+      }
+
+      /* Messages */
+      .message {
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 800px;
+        word-wrap: break-word;
+        font-size: 15px;
+        line-height: 1.5;
+        position: relative;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+      .message.user {
+        background-color: var(--primary-color);
+        color: white;
+        align-self: flex-end;
+        border-bottom-right-radius: 4px;
+        margin-left: 20%;
+      }
+      .message.model {
+        background-color: white;
+        color: var(--text-color);
+        align-self: flex-start;
+        border-bottom-left-radius: 4px;
+        margin-right: 20%;
+      }
+
+      /* UI Card injected into chat */
+      .ui-card-container {
+        align-self: flex-start;
+        width: 100%;
+        max-width: 800px;
+        margin-right: 10%;
+        animation: fadeIn 0.4s ease;
+      }
+      .card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        border: 1px solid #e0e0e0;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      /* Welcome Section (Compact) */
+      #welcome-section {
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        margin-bottom: 15px;
+        align-self: center;
+        width: 100%;
+        max-width: 700px;
+      }
+      #welcome-section h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        text-align: center;
+        color: #333;
+        font-size: 16px;
+      }
+      .sample-item {
+        margin-bottom: 8px;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 8px;
+        background: #f9f9f9;
+      }
+      .sample-title {
+        font-weight: bold;
+        color: var(--primary-color);
+        margin-bottom: 4px;
+        display: block;
+        font-size: 14px;
+      }
+      .prompt-box {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .prompt-text {
+        flex: 1;
+        background: white;
+        padding: 6px 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 12px;
+        color: #555;
+        font-family: monospace;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .copy-btn {
+        background: #eee;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 4px 10px;
+        cursor: pointer;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .copy-btn:hover {
+        background: #ddd;
+      }
+
+      /* Input Area */
+      #input-area {
+        padding: 15px 20px;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 10px;
+        background: white;
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 12px 20px;
+        border: 1px solid #ddd;
+        border-radius: 24px;
+        outline: none;
+        font-size: 15px;
+      }
+      button.send-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0 25px;
+        border-radius: 24px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: default;
+      }
+
+      /* UI Components Styles */
+      h2 {
+        margin-top: 0;
+        color: #333;
+        font-size: 18px;
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+      }
+
+      .file-item {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+      }
+      .file-item:last-child {
+        border-bottom: none;
+      }
+      .file-info {
+        margin-left: 10px;
+        flex: 1;
+      }
+      .file-name {
+        font-weight: 500;
+        display: block;
+        color: #333;
+      }
+
+      /* Hide File ID visually */
+      .file-id {
+        display: none;
+      }
+
+      .card-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
+      }
+      .btn-primary {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .btn-primary:hover {
+        filter: brightness(0.9);
+      }
+      .btn-primary:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      pre {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 6px;
+        overflow-x: auto;
+        border: 1px solid #eee;
+        white-space: pre-wrap;
+        font-family: Consolas, monospace;
+        font-size: 13px;
+        color: #333;
+        max-height: 250px;
+      }
+      textarea {
+        width: 100%;
+        height: 200px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-family: Consolas, monospace;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+
+      /* Metadata Row Styles */
+      .meta-card {
+        margin-bottom: 20px;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 15px;
+        background: #fff;
+      }
+      .meta-card h3 {
+        margin-top: 0;
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: var(--primary-color);
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 5px;
+      }
+      .meta-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        border-bottom: 1px dashed #f0f0f0;
+        font-size: 13px;
+      }
+      .meta-row:last-child {
+        border-bottom: none;
+      }
+      .meta-label {
+        font-weight: bold;
+        color: #555;
+      }
+
+      /* Content Viewer Multiple */
+      .content-block {
+        margin-bottom: 25px;
+      }
+      .content-block h3 {
+        margin-top: 0;
+        font-size: 15px;
+        color: #333;
+        background: #eee;
+        padding: 8px;
+        border-radius: 4px 4px 0 0;
+        border: 1px solid #ddd;
+        border-bottom: none;
+        margin-bottom: 0;
+      }
+      .content-block pre {
+        border-radius: 0 0 4px 4px;
+        margin-top: 0;
+        border: 1px solid #ddd;
+      }
+
+      /* Preview List */
+      .preview-item {
+        margin-bottom: 20px;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 15px;
+        background: #fff;
+      }
+      .preview-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 10px;
+      }
+      .preview-title {
+        font-weight: bold;
+        font-size: 15px;
+        margin-left: 10px;
+      }
+      input[type="radio"] {
+        transform: scale(1.3);
+        cursor: pointer;
+      }
+
+      /* Success Screen */
+      .success-icon {
+        font-size: 48px;
+        color: var(--success-color);
+        margin-bottom: 10px;
+      }
+      .success-title {
+        font-size: 22px;
+        font-weight: bold;
+        color: var(--success-color);
+        margin-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text">Thinking...</div>
+    </div>
+
+    <div id="chat-container">
+      <div id="welcome-section">
+        <h3>Sample Prompts</h3>
+        <div class="sample-item">
+          <span class="sample-title">📄 Pattern 1: View File Content</span>
+          <div class="prompt-box">
+            <div class="prompt-text" id="p1-text">
+              Please list the files in the folder named 'sample'. I would like
+              to select a file and view its content.
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('p1-text')">
+              Copy
+            </button>
+          </div>
+        </div>
+        <div class="sample-item">
+          <span class="sample-title">ℹ️ Pattern 2: View File Metadata</span>
+          <div class="prompt-box">
+            <div class="prompt-text" id="p2-text">
+              Show me the files in the 'sample' folder. I need to select a file
+              to check its metadata.
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('p2-text')">
+              Copy
+            </button>
+          </div>
+        </div>
+        <div class="sample-item">
+          <span class="sample-title">✏️ Pattern 3: Verify and Edit File</span>
+          <div class="prompt-box">
+            <div class="prompt-text" id="p3-text">
+              I want to edit a file in the 'sample' folder. Please let me select
+              a file and check its content first. If it's the right one, I will
+              edit and update it.
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('p3-text')">
+              Copy
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="message model">
+        Hello! I am ready to help you with your files. Please copy a prompt
+        above or type your own request.
+      </div>
+    </div>
+
+    <div id="input-area">
+      <input
+        type="text"
+        id="user-input"
+        placeholder="Type or paste your request..."
+        onkeypress="handleKey(event)"
+      />
+      <button class="send-btn" id="send-btn" onclick="sendUserMessage()">
+        Send
+      </button>
+    </div>
+
+    <script>
+      let chatHistory = [];
+
+      function copyToClipboard(elementId) {
+        const text = document.getElementById(elementId).innerText;
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = document.querySelector(
+            `button[onclick="copyToClipboard('${elementId}')"]`,
+          );
+          const originalText = btn.innerText;
+          btn.innerText = "Copied!";
+          setTimeout(() => (btn.innerText = originalText), 2000);
+        });
+      }
+
+      function handleKey(e) {
+        if (e.key === "Enter") sendUserMessage();
+      }
+
+      function sendUserMessage() {
+        const input = document.getElementById("user-input");
+        const text = input.value.trim();
+        if (!text) return;
+        appendMessage("user", text);
+        input.value = "";
+        requestBackend(text);
+      }
+
+      function appendMessage(role, text) {
+        if (role === "system") return;
+        const container = document.getElementById("chat-container");
+        const div = document.createElement("div");
+        div.className = `message ${role}`;
+        div.textContent = text;
+        container.appendChild(div);
+        chatHistory.push({ role: role, content: text });
+        scrollToBottom();
+      }
+
+      function requestBackend(msg) {
+        showLoading(true);
+        toggleInput(false);
+        google.script.run
+          .withSuccessHandler(handleResponse)
+          .withFailureHandler(handleError)
+          .processUserRequest(msg, chatHistory);
+      }
+
+      function handleResponse(response) {
+        showLoading(false);
+        toggleInput(true);
+        if (response.text) appendMessage("model", response.text);
+        if (response.uiJson) renderUi(response.uiJson);
+      }
+
+      function handleError(e) {
+        showLoading(false);
+        toggleInput(true);
+        alert("Error: " + e.message);
+      }
+
+      function showLoading(isLoading) {
+        document.getElementById("loading-overlay").style.display = isLoading
+          ? "flex"
+          : "none";
+      }
+      function toggleInput(enabled) {
+        document.getElementById("user-input").disabled = !enabled;
+        document.getElementById("send-btn").disabled = !enabled;
+      }
+      function scrollToBottom() {
+        const container = document.getElementById("chat-container");
+        setTimeout(() => {
+          container.scrollTop = container.scrollHeight;
+        }, 50);
+      }
+
+      function renderUi(uiJson) {
+        const container = document.getElementById("chat-container");
+        const wrapper = document.createElement("div");
+        wrapper.className = "ui-card-container";
+        const card = document.createElement("div");
+        card.className = "card";
+
+        switch (uiJson.type) {
+          case "FILE_SELECTOR":
+            renderFileSelector(card, uiJson.data);
+            break;
+          case "CONTENT_VIEWER":
+            renderContentViewer(card, uiJson.data);
+            break;
+          case "METADATA_VIEWER":
+            renderMetadataViewer(card, uiJson.data);
+            break;
+          case "SELECTION_PREVIEW":
+            renderSelectionPreview(card, uiJson.data);
+            break;
+          case "EDITOR":
+            renderEditor(card, uiJson.data);
+            break;
+          case "UPDATE_SUCCESS":
+            renderUpdateSuccess(card, uiJson.data);
+            break;
+          default:
+            card.innerHTML = "<p>Unknown UI Type</p>";
+        }
+
+        wrapper.appendChild(card);
+        container.appendChild(wrapper);
+        scrollToBottom();
+      }
+
+      function createActionArea(button) {
+        const div = document.createElement("div");
+        div.className = "card-actions";
+        div.appendChild(button);
+        return div;
+      }
+
+      // 1. File Selector
+      function renderFileSelector(container, data) {
+        const h2 = document.createElement("h2");
+        h2.textContent = "Select Files";
+        container.appendChild(h2);
+
+        const listDiv = document.createElement("div");
+        if (!data.files || data.files.length === 0) {
+          listDiv.innerHTML = "<p>No files found.</p>";
+        } else {
+          data.files.forEach((f) => {
+            const row = document.createElement("div");
+            row.className = "file-item";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.value = f.id;
+            checkbox.style.marginRight = "10px";
+            checkbox.style.transform = "scale(1.2)";
+
+            const info = document.createElement("div");
+            info.className = "file-info";
+            // ID hidden via CSS .file-id
+            info.innerHTML = `<span class="file-name">${f.name}</span><span class="file-id">${f.id}</span>`;
+
+            row.appendChild(checkbox);
+            row.appendChild(info);
+            listDiv.appendChild(row);
+          });
+        }
+        container.appendChild(listDiv);
+
+        const btn = document.createElement("button");
+        btn.className = "btn-primary";
+        btn.textContent = "OK";
+        btn.onclick = () => {
+          const checked = container.querySelectorAll(
+            "input[type='checkbox']:checked",
+          );
+          const ids = Array.from(checked).map((c) => c.value);
+          if (ids.length === 0) {
+            alert("Please select at least one file.");
+            return;
+          }
+          btn.disabled = true;
+          btn.textContent = "Submitted";
+          container
+            .querySelectorAll("input")
+            .forEach((i) => (i.disabled = true));
+
+          const sysMsg = `SYSTEM_EVENT: User selected files with IDs: ${JSON.stringify(ids)}`;
+          chatHistory.push({ role: "user", content: sysMsg });
+          requestBackend(sysMsg);
+        };
+        container.appendChild(createActionArea(btn));
+      }
+
+      // 2. Content Viewer (Updated for Multiple Files)
+      function renderContentViewer(container, data) {
+        container.innerHTML = `<h2>Selected Files Content</h2>`;
+        if (data.files && data.files.length > 0) {
+          data.files.forEach((f) => {
+            const block = document.createElement("div");
+            block.className = "content-block";
+
+            const title = document.createElement("h3");
+            title.textContent = f.name;
+
+            const pre = document.createElement("pre");
+            pre.textContent = f.content;
+
+            block.appendChild(title);
+            block.appendChild(pre);
+            container.appendChild(block);
+          });
+        } else {
+          container.innerHTML += "<p>No content loaded.</p>";
+        }
+      }
+
+      // 3. Metadata Viewer (Updated for Multiple Files)
+      function renderMetadataViewer(container, data) {
+        container.innerHTML = `<h2>Selected Files Metadata</h2>`;
+        const fields = ["id", "size", "type", "created"];
+
+        if (data.files && data.files.length > 0) {
+          data.files.forEach((f) => {
+            const card = document.createElement("div");
+            card.className = "meta-card";
+
+            const title = document.createElement("h3");
+            title.textContent = f.name;
+            card.appendChild(title);
+
+            fields.forEach((key) => {
+              if (f[key]) {
+                const row = document.createElement("div");
+                row.className = "meta-row";
+                const label = document.createElement("span");
+                label.className = "meta-label";
+                label.textContent = key.toUpperCase();
+                const val = document.createElement("span");
+                val.textContent = f[key];
+
+                row.appendChild(label);
+                row.appendChild(val);
+                card.appendChild(row);
+              }
+            });
+            container.appendChild(card);
+          });
+        } else {
+          container.innerHTML += "<p>No metadata loaded.</p>";
+        }
+      }
+
+      // 4. Selection Preview (Pattern 3: List with Radio)
+      function renderSelectionPreview(container, data) {
+        const h2 = document.createElement("h2");
+        h2.textContent = "Confirm Selection for Edit";
+        container.appendChild(h2);
+
+        const p = document.createElement("p");
+        p.textContent = "Review contents and select one file to edit:";
+        container.appendChild(p);
+
+        const formDiv = document.createElement("div");
+
+        if (data.files && data.files.length > 0) {
+          data.files.forEach((f, index) => {
+            const item = document.createElement("div");
+            item.className = "preview-item";
+
+            const header = document.createElement("div");
+            header.className = "preview-header";
+
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            radio.name = "edit-target";
+            radio.value = f.id;
+            if (index === 0) radio.checked = true;
+
+            const title = document.createElement("span");
+            title.className = "preview-title";
+            title.textContent = f.name;
+
+            header.appendChild(radio);
+            header.appendChild(title);
+            item.appendChild(header);
+
+            const pre = document.createElement("pre");
+            pre.textContent = f.content;
+            item.appendChild(pre);
+
+            formDiv.appendChild(item);
+          });
+        }
+        container.appendChild(formDiv);
+
+        const btn = document.createElement("button");
+        btn.className = "btn-primary";
+        btn.textContent = "OK (Edit Selected)";
+        btn.onclick = () => {
+          const selected = container.querySelector(
+            "input[name='edit-target']:checked",
+          );
+          if (!selected) {
+            alert("Please select a file to edit.");
+            return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = "Processing...";
+
+          const sysMsg = `SYSTEM_EVENT: User confirmed selection for file ID: ${selected.value}. Requesting EDITOR form.`;
+          chatHistory.push({ role: "user", content: sysMsg });
+          requestBackend(sysMsg);
+        };
+        container.appendChild(createActionArea(btn));
+      }
+
+      // 5. Editor
+      function renderEditor(container, data) {
+        container.innerHTML = `<h2>Edit File: ${data.fileName}</h2>`;
+        const area = document.createElement("textarea");
+        area.value = data.content;
+        container.appendChild(area);
+        const btn = document.createElement("button");
+        btn.className = "btn-primary";
+        btn.textContent = "UPDATE";
+        btn.onclick = () => {
+          btn.disabled = true;
+          btn.textContent = "Updating...";
+          area.disabled = true;
+          const newContent = area.value;
+          const sysMsg = `SYSTEM_EVENT: User submitted update for file ID: ${data.fileId}. New Content: ${JSON.stringify(newContent)}`;
+          chatHistory.push({ role: "user", content: sysMsg });
+          requestBackend(sysMsg);
+        };
+        container.appendChild(createActionArea(btn));
+      }
+
+      // 6. Update Success Screen
+      function renderUpdateSuccess(container, data) {
+        container.style.textAlign = "center";
+
+        const icon = document.createElement("div");
+        icon.className = "success-icon";
+        icon.textContent = "✅";
+
+        const title = document.createElement("div");
+        title.className = "success-title";
+        title.textContent = "Update Successful!";
+
+        const msg = document.createElement("p");
+        msg.innerHTML = `File <strong>${data.fileName || "Unknown"}</strong> has been updated.`;
+
+        const time = document.createElement("p");
+        time.style.color = "#999";
+        time.style.fontSize = "12px";
+        time.textContent = `Timestamp: ${data.timestamp}`;
+
+        container.appendChild(icon);
+        container.appendChild(title);
+        container.appendChild(msg);
+        container.appendChild(time);
+
+        // No buttons needed
+      }
+    </script>
+  </body>
+</html>
