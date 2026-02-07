@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <base target="_top" />
@@ -10,8 +10,9 @@
         --surface-color: #ffffff;
       }
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Helvetica, Arial, sans-serif;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
         margin: 0;
         padding: 0;
         background: var(--bg-color);
@@ -359,7 +360,7 @@
             if (msg.beginRendering.styles?.primaryColor) {
               document.documentElement.style.setProperty(
                 "--primary-color",
-                msg.beginRendering.styles.primaryColor
+                msg.beginRendering.styles.primaryColor,
               );
             }
           }
@@ -370,7 +371,7 @@
           }
           if (msg.surfaceUpdate) {
             msg.surfaceUpdate.components.forEach(
-              (c) => (state.components[c.id] = c)
+              (c) => (state.components[c.id] = c),
             );
             if (!state.rootId && msg.surfaceUpdate.components.length > 0) {
               state.rootId = msg.surfaceUpdate.components[0].id;
@@ -405,14 +406,14 @@
           .replace(/>/g, "&gt;");
         html = html.replace(
           /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-          '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+          '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
         );
         const urlPattern = /(https?:\/\/[^\s]+)/;
         if (!html.includes("<a ") && urlPattern.test(html)) {
           html = html.replace(
             urlPattern,
             (match) =>
-              `<a href="${match}" target="_blank" rel="noopener noreferrer">More Info</a>`
+              `<a href="${match}" target="_blank" rel="noopener noreferrer">More Info</a>`,
           );
         }
         return html;
@@ -426,12 +427,12 @@
 
         if (entry.valueMap && Array.isArray(entry.valueMap)) {
           const isStandardMap = entry.valueMap.some(
-            (v) => v && typeof v === "object" && "key" in v
+            (v) => v && typeof v === "object" && "key" in v,
           );
           if (isStandardMap) {
             const isListLike = entry.valueMap.every(
               (v, i) =>
-                String(v.key) === String(i) || String(v.key).startsWith("item")
+                String(v.key) === String(i) || String(v.key).startsWith("item"),
             );
             if (isListLike) return entry.valueMap.map((v) => parseValue(v));
             const obj = {};
@@ -523,7 +524,7 @@
                 props.url.literalString ||
                 resolvePath(sid, joinPath(ctx, props.url.path));
               img.src =
-                url || "https://via.placeholder.com/400x200?text=No+Image";
+                url || "https:\/\/via.placeholder.com\/400x200?text=No+Image";
               if (props.width) {
                 img.style.width = props.width;
                 img.style.minHeight = "0";
@@ -580,26 +581,26 @@
                   };
                   sendMessage(
                     `DETAILS_JSON:${JSON.stringify(d)}`,
-                    "Loading Form..."
+                    "Loading Form...",
                   );
                 } else if (actionName === "submit_booking") {
                   const inputs = document.querySelectorAll(".a2ui-textfield");
                   let details = [];
                   inputs.forEach((i) =>
-                    details.push(`${i.dataset.label}: ${i.value}`)
+                    details.push(`${i.dataset.label}: ${i.value}`),
                   );
                   const rName =
                     resolvePath(sid, "restaurantName") || "the restaurant";
                   const rImage = resolvePath(sid, "imageUrl") || "";
                   sendMessage(
                     `User submitted a booking for ${rName}. Details: ${details.join(
-                      ", "
+                      ", ",
                     )}. ImageUrl: ${rImage}`,
-                    "Submitting..."
+                    "Submitting...",
                   );
                 } else if (actionName === "add_events") {
                   const checkboxes = document.querySelectorAll(
-                    ".a2ui-checkbox:checked"
+                    ".a2ui-checkbox:checked",
                   );
                   if (checkboxes.length === 0) {
                     alert("Please select at least one event.");
@@ -614,7 +615,7 @@
                     }
                   });
                   const msg = `Please add these events to calendar: ${JSON.stringify(
-                    selectedEvents
+                    selectedEvents,
                   )}`;
                   sendMessage(msg, "Adding to Calendar...");
                 } else if (actionName === "back_to_list") {
@@ -717,9 +718,8 @@
 
             if (r.uiJson) renderA2UiMessages(r.uiJson);
             else if (r.text)
-              document.getElementById(
-                "ui-container"
-              ).innerHTML = `<div class="a2ui-card"><p>${r.text}</p></div>`;
+              document.getElementById("ui-container").innerHTML =
+                `<div class="a2ui-card"><p>${r.text}</p></div>`;
           })
           .withFailureHandler((e) => {
             alert("Error: " + e.message);
