@@ -1,0 +1,1098 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top" />
+    <title>A2UI App Hub</title>
+    <style>
+      :root {
+        --primary-color: #007bff;
+        --bg-color: #f0f2f5;
+        --surface-color: #ffffff;
+        --success-color: #28a745;
+        --error-color: #dc3545;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: var(--bg-color);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      /* Header & Status */
+      #header {
+        padding: 10px 20px;
+        background: white;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+        z-index: 10;
+      }
+      #status-text {
+        font-size: 13px;
+        color: #666;
+      }
+      #clear-btn {
+        background: none;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 12px;
+        cursor: pointer;
+        color: #555;
+      }
+      #clear-btn:hover {
+        background: #f0f0f0;
+      }
+
+      /* Main Container (Chat Display Area) */
+      #ui-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px 0;
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-bottom: 20px;
+      }
+
+      /* Input Area (Bottom Control) */
+      #input-area {
+        flex-shrink: 0;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        border-top: 1px solid #ddd;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-bottom: 10px;
+        z-index: 10;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        position: relative;
+      }
+
+      #sample-chips-container {
+        width: 100%;
+        max-width: 600px;
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 12px 10px;
+        white-space: nowrap;
+        scrollbar-width: none; /* Firefox */
+      }
+      #sample-chips-container::-webkit-scrollbar {
+        display: none; /* Chrome/Safari */
+      }
+      .sample-chip {
+        background: #e4e6e9;
+        color: #050505;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        border: none;
+        flex-shrink: 0;
+      }
+      .sample-chip:hover {
+        background: #d8dadf;
+      }
+      #input-area-inner {
+        max-width: 600px;
+        width: 100%;
+        display: flex;
+        gap: 10px;
+        padding: 5px 20px;
+        box-sizing: border-box;
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 12px 20px;
+        border-radius: 24px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+        outline: none;
+      }
+      button#send-btn {
+        padding: 10px 25px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 24px;
+        cursor: pointer;
+        font-weight: bold;
+        flex-shrink: 0;
+      }
+      button:disabled {
+        background: #ccc;
+      }
+      /* Loading Overlay */
+      #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        z-index: 1000;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+      }
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid var(--primary-color);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .loading-text {
+        margin-top: 15px;
+        color: #555;
+        font-weight: 600;
+      }
+
+      /* --- A2UI & Shared Components --- */
+      .a2ui-surface,
+      .quiz-card-container,
+      .a2ui-card {
+        width: 100%;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+        flex-shrink: 0;
+      }
+
+      .a2ui-surface {
+        animation: fadeIn 0.3s ease;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .a2ui-column {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+      }
+      .a2ui-row {
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        width: 100%;
+        align-items: flex-start;
+      }
+
+      .a2ui-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        padding: 16px;
+        border: 1px solid #eee;
+        box-sizing: border-box;
+
+        height: auto;
+        max-height: none;
+        overflow-y: visible;
+        overflow-x: auto;
+      }
+
+      .a2ui-text {
+        margin: 0;
+        color: #1c1e21;
+        word-wrap: break-word;
+        line-height: 1.5;
+      }
+      .a2ui-text-h1 {
+        font-size: 24px;
+        font-weight: 800;
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+      }
+      .a2ui-text-h2 {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin-bottom: 8px;
+      }
+      .a2ui-text-h3 {
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .a2ui-text-body {
+        font-size: 15px;
+        color: #4b4f56;
+      }
+      .a2ui-text strong {
+        font-weight: 700;
+        color: #222;
+      }
+      .a2ui-image {
+        width: 100%;
+        border-radius: 8px;
+        object-fit: cover;
+      }
+      .a2ui-button {
+        padding: 10px 20px;
+        background: #ebedf0;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+      .a2ui-button:hover {
+        background: #dcdedf;
+      }
+      .a2ui-button-primary {
+        background: var(--primary-color);
+        color: white;
+      }
+      .a2ui-button-primary:hover {
+        filter: brightness(0.9);
+      }
+
+      /* --- Quiz Specific Styles --- */
+      .quiz-question-text {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #333;
+      }
+      .quiz-options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .quiz-option {
+        padding: 12px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 15px;
+        transition: all 0.2s ease;
+        text-align: left;
+      }
+      .quiz-option:hover:not(.disabled) {
+        border-color: var(--primary-color);
+        background: #f8f9fa;
+      }
+      .quiz-option.selected {
+        border-color: var(--primary-color);
+        background: #eef6fc;
+      }
+      .quiz-option.correct {
+        border-color: var(--success-color);
+        background: #d4edda;
+        color: #155724;
+        font-weight: bold;
+      }
+      .quiz-option.incorrect {
+        border-color: var(--error-color);
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .quiz-option.disabled {
+        pointer-events: none;
+        opacity: 0.7;
+      }
+      .quiz-explanation {
+        margin-top: 15px;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #666;
+        font-size: 14px;
+        animation: fadeIn 0.3s;
+      }
+      .quiz-explanation.correct {
+        border-left-color: var(--success-color);
+      }
+      .quiz-explanation.incorrect {
+        border-left-color: var(--error-color);
+      }
+      .quiz-progress {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      /* --- Rich Summary Tables & Lists --- */
+      .summary-content table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 10px 0;
+        font-size: 14px;
+      }
+      .summary-content th,
+      .summary-content td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      .summary-content th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+      }
+      .summary-content ul {
+        padding-left: 20px;
+      }
+      .summary-content li {
+        margin-bottom: 5px;
+      }
+      .summary-content img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 10px auto;
+        border-radius: 8px;
+      }
+
+      /* Charts Container */
+      .charts-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+      .chart-item {
+        flex: 1;
+        min-width: 300px;
+        max-width: 500px;
+        text-align: center;
+      }
+      .chart-label {
+        font-size: 14px;
+        font-weight: bold;
+        color: #555;
+        margin-bottom: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loading-msg">Processing...</div>
+    </div>
+
+    <div id="header">
+      <span id="status-text">Ready</span>
+      <button id="clear-btn" onclick="clearHistory()">Clear History</button>
+    </div>
+
+    <!-- Chat Display Area -->
+    <div id="ui-container">
+      <div
+        id="welcome-msg"
+        class="a2ui-card"
+        style="text-align: center; margin-top: 50px"
+      >
+        <h2 class="a2ui-text-h2">A2UI App Hub</h2>
+        <p class="a2ui-text-body">
+          I can help you find restaurants, manage events, or generate study
+          quizzes.
+        </p>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div id="input-area">
+      <div id="sample-chips-container">
+        <!-- SAMPLE PROMPTS -->
+        <button
+          class="sample-chip"
+          onclick="setInput('Find 3 Chinese restaurants in New York')"
+        >
+          Restaurants in NY
+        </button>
+        <button
+          class="sample-chip"
+          onclick="setInput('Show events for Feb 17-20')"
+        >
+          Find Events
+        </button>
+        <button
+          class="sample-chip"
+          onclick="
+            setInput(
+              'Create a quiz about Google Apps Script basics. Especially, I want to manage Google Sheets using Google Apps Script.',
+            )
+          "
+        >
+          GAS Quiz
+        </button>
+        <button
+          class="sample-chip"
+          onclick="setInput('Help me study JavaScript Promises')"
+        >
+          JS Promise Quiz
+        </button>
+      </div>
+      <div id="input-area-inner">
+        <input
+          type="text"
+          id="user-input"
+          placeholder="Type message..."
+          onkeypress="handleKeyPress(event)"
+        />
+        <button id="send-btn" onclick="handleSend()">Send</button>
+      </div>
+    </div>
+
+    <script>
+      let appState = { surfaces: {}, activeSurfaceId: null };
+
+      // History State
+      let chatHistory = []; // Array of { role: 'user'|'model', text: string }
+
+      // Quiz State
+      let quizState = {
+        active: false,
+        questions: [],
+        currentIndex: 0,
+        results: [],
+      };
+
+      function setInput(text) {
+        const input = document.getElementById("user-input");
+        input.value = text;
+        input.focus();
+      }
+
+      function handleKeyPress(e) {
+        if (e.key === "Enter") handleSend();
+      }
+
+      function clearHistory() {
+        chatHistory = [];
+        quizState.active = false;
+        document.getElementById("ui-container").innerHTML = `
+          <div id="welcome-msg" class="a2ui-card" style="text-align: center; margin-top: 50px">
+            <h2 class="a2ui-text-h2">A2UI App Hub</h2>
+            <p class="a2ui-text-body">History Cleared. How can I help?</p>
+          </div>
+        `;
+        appState = { surfaces: {}, activeSurfaceId: null };
+      }
+
+      function handleSend() {
+        const i = document.getElementById("user-input");
+        const val = i.value.trim();
+        if (!val) return;
+
+        renderMessageCard(val, true);
+        sendMessage(val, "Thinking...");
+        i.value = "";
+      }
+
+      function scrollToBottom() {
+        const container = document.getElementById("ui-container");
+        setTimeout(() => {
+          container.scrollTop = container.scrollHeight;
+        }, 100);
+      }
+
+      function renderMessageCard(text, isUser = false) {
+        const container = document.getElementById("ui-container");
+        const welcome = document.getElementById("welcome-msg");
+        if (welcome) welcome.style.display = "none";
+
+        const card = document.createElement("div");
+        card.className = "a2ui-card";
+        const html = parseMarkdownText(text);
+
+        if (isUser) {
+          card.style.borderLeft = "4px solid #007bff";
+          card.style.background = "#f8faff";
+          // Add to history
+          chatHistory.push({ role: "user", text: text });
+        } else {
+          // Add to history (Model)
+          chatHistory.push({ role: "model", text: text });
+        }
+
+        card.innerHTML = `<p class="a2ui-text-body">${html}</p>`;
+        container.appendChild(card);
+        scrollToBottom();
+      }
+
+      function sendMessage(q, s) {
+        const i = document.getElementById("user-input");
+        const b = document.getElementById("send-btn");
+        const overlay = document.getElementById("loading-overlay");
+        const overlayMsg = document.getElementById("loading-msg");
+
+        i.disabled = b.disabled = true;
+        overlayMsg.textContent = s;
+        overlay.style.display = "flex";
+
+        // Pass the history along with the new query
+        const historyJson = JSON.stringify(chatHistory);
+
+        google.script.run
+          .withSuccessHandler((r) => {
+            i.disabled = b.disabled = false;
+            overlay.style.display = "none";
+            handleServerResponse(r);
+          })
+          .withFailureHandler((e) => {
+            alert("Error: " + e.message);
+            i.disabled = b.disabled = false;
+            overlay.style.display = "none";
+          })
+          .processUserRequest(q, historyJson); // Sending history
+      }
+
+      function handleServerResponse(response) {
+        // Fallback for plain text
+        if (
+          response.text &&
+          !response.uiJson &&
+          !response.quizData &&
+          !response.quizSummary
+        ) {
+          renderMessageCard(response.text);
+          return;
+        }
+
+        if (response.text) {
+          renderMessageCard(response.text);
+        }
+
+        // 1. Handle Quiz Initialization
+        if (response.quizData && response.quizData.type === "QUIZ_INIT") {
+          startQuiz(response.quizData.data);
+        }
+        // 2. Handle Quiz Summary
+        else if (
+          response.quizSummary &&
+          response.quizSummary.type === "SUMMARY_CARD"
+        ) {
+          renderQuizSummary(response.quizSummary.data);
+        }
+        // 3. Handle Standard A2UI
+        else if (response.uiJson) {
+          renderA2UiMessages(response.uiJson);
+        }
+      }
+
+      // ----------------------------------------------------------------------
+      // QUIZ LOGIC
+      // ----------------------------------------------------------------------
+
+      function startQuiz(data) {
+        quizState = {
+          active: true,
+          topic: data.topic,
+          questions: data.questions,
+          currentIndex: 0,
+          results: [],
+        };
+        renderNextQuestion();
+      }
+
+      function renderNextQuestion() {
+        if (quizState.currentIndex >= quizState.questions.length) {
+          finishQuiz();
+          return;
+        }
+
+        const q = quizState.questions[quizState.currentIndex];
+        const container = document.getElementById("ui-container");
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "quiz-card-container";
+
+        const card = document.createElement("div");
+        card.className = "a2ui-card";
+
+        const progress = document.createElement("div");
+        progress.className = "quiz-progress";
+        progress.textContent = `Question ${quizState.currentIndex + 1} / ${quizState.questions.length} • ${quizState.topic}`;
+
+        const qText = document.createElement("div");
+        qText.className = "quiz-question-text";
+        qText.textContent = q.q;
+
+        const optList = document.createElement("div");
+        optList.className = "quiz-options-list";
+
+        q.options.forEach((opt) => {
+          const btn = document.createElement("button");
+          btn.className = "quiz-option";
+          btn.textContent = opt;
+          btn.onclick = () => handleOptionClick(btn, opt, q, wrapper);
+          optList.appendChild(btn);
+        });
+
+        card.appendChild(progress);
+        card.appendChild(qText);
+        card.appendChild(optList);
+        wrapper.appendChild(card);
+        container.appendChild(wrapper);
+
+        setTimeout(() => {
+          wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
+      }
+
+      function handleOptionClick(
+        selectedBtn,
+        selectedText,
+        questionObj,
+        cardWrapper,
+      ) {
+        const allBtns = cardWrapper.querySelectorAll(".quiz-option");
+        allBtns.forEach((b) => b.classList.add("disabled"));
+
+        const isCorrect = selectedText === questionObj.a;
+
+        if (isCorrect) {
+          selectedBtn.classList.add("correct");
+        } else {
+          selectedBtn.classList.add("incorrect");
+          allBtns.forEach((b) => {
+            if (b.textContent === questionObj.a) b.classList.add("correct");
+          });
+        }
+
+        quizState.results.push({
+          question: questionObj.q,
+          answer: questionObj.a,
+          options: questionObj.options,
+          userSelection: selectedText,
+          isCorrect: isCorrect,
+        });
+
+        const card = cardWrapper.querySelector(".a2ui-card");
+        const exp = document.createElement("div");
+        exp.className = `quiz-explanation ${isCorrect ? "correct" : "incorrect"}`;
+        exp.innerHTML = `<strong>${isCorrect ? "Correct!" : "Incorrect."}</strong> ${questionObj.ex}`;
+        card.appendChild(exp);
+
+        quizState.currentIndex++;
+        setTimeout(() => {
+          renderNextQuestion();
+        }, 2500);
+      }
+
+      function finishQuiz() {
+        quizState.active = false;
+        const payload = {
+          results: quizState.results,
+        };
+        const sysMsg = `SYSTEM_QUIZ_COMPLETED:${JSON.stringify(payload)}`;
+        sendMessage(sysMsg, "Analyzing Performance...");
+      }
+
+      function renderQuizSummary(data) {
+        const container = document.getElementById("ui-container");
+        const card = document.createElement("div");
+        card.className = "a2ui-card";
+
+        const contentHtml = data.htmlContent
+          ? data.htmlContent
+          : parseMarkdownText(data.analysis);
+
+        const html = `
+          <div class="a2ui-text-h1">Quiz Complete</div>
+          <div class="summary-content a2ui-text-body">
+            ${contentHtml}
+          </div>
+        `;
+
+        card.innerHTML = html;
+        container.appendChild(card);
+
+        // Wait for images to load before final scroll
+        const images = card.getElementsByTagName("img");
+        if (images.length > 0) {
+          let loaded = 0;
+          for (let img of images) {
+            img.onload = () => {
+              loaded++;
+              if (loaded === images.length) scrollToBottom();
+            };
+            // Fallback scroll if image is cached or load event misses
+            setTimeout(scrollToBottom, 500);
+          }
+        } else {
+          scrollToBottom();
+        }
+      }
+
+      // ----------------------------------------------------------------------
+      // EXISTING A2UI RENDERERS
+      // ----------------------------------------------------------------------
+      function renderA2UiMessages(messages) {
+        const container = document.getElementById("ui-container");
+
+        messages.forEach((msg) => {
+          const surfaceId =
+            msg.surfaceUpdate?.surfaceId ||
+            msg.dataModelUpdate?.surfaceId ||
+            msg.beginRendering?.surfaceId ||
+            "default";
+          appState.activeSurfaceId = surfaceId;
+
+          if (!appState.surfaces[surfaceId]) {
+            appState.surfaces[surfaceId] = {
+              data: {},
+              components: {},
+              rootId: null,
+            };
+          }
+          const state = appState.surfaces[surfaceId];
+          if (msg.beginRendering) {
+            state.rootId = msg.beginRendering.root;
+            if (msg.beginRendering.styles?.primaryColor) {
+              document.documentElement.style.setProperty(
+                "--primary-color",
+                msg.beginRendering.styles.primaryColor,
+              );
+            }
+          }
+          if (msg.dataModelUpdate && msg.dataModelUpdate.contents) {
+            msg.dataModelUpdate.contents.forEach((entry) => {
+              state.data[entry.key] = parseValue(entry);
+            });
+          }
+          if (msg.surfaceUpdate) {
+            msg.surfaceUpdate.components.forEach(
+              (c) => (state.components[c.id] = c),
+            );
+            if (!state.rootId && msg.surfaceUpdate.components.length > 0) {
+              state.rootId = msg.surfaceUpdate.components[0].id;
+            }
+          }
+        });
+        renderAppState();
+
+        // Ensure image loading doesn't hide content
+        setTimeout(scrollToBottom, 300);
+      }
+
+      function renderAppState() {
+        const container = document.getElementById("ui-container");
+        const sid = appState.activeSurfaceId;
+        if (!sid) return;
+        const s = appState.surfaces[sid];
+        if (s && s.rootId) {
+          const el = renderComponent(sid, s.rootId, "");
+          if (el) {
+            const surfaceDiv = document.createElement("div");
+            surfaceDiv.className = "a2ui-surface";
+            surfaceDiv.appendChild(el);
+            container.appendChild(surfaceDiv);
+          }
+        }
+      }
+
+      function parseMarkdownText(text) {
+        if (!text) return "";
+        let html = String(text)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+          .replace(/\n- (.*)/g, "<br/>• $1")
+          .replace(/\n/g, "<br/>");
+
+        html = html.replace(
+          /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+          '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>',
+        );
+        return html;
+      }
+
+      function parseValue(entry) {
+        if (!entry || typeof entry !== "object") return null;
+        if (entry.valueString !== undefined) return entry.valueString;
+        if (entry.valueNumber !== undefined) return entry.valueNumber;
+        if (entry.valueBoolean !== undefined) return entry.valueBoolean;
+        if (entry.valueMap && Array.isArray(entry.valueMap)) {
+          const isStandardMap = entry.valueMap.some((v) => v.key);
+          if (isStandardMap) {
+            const isListLike = entry.valueMap.every(
+              (v, i) =>
+                String(v.key) === String(i) || String(v.key).startsWith("item"),
+            );
+            if (isListLike) return entry.valueMap.map((v) => parseValue(v));
+            const obj = {};
+            entry.valueMap.forEach((v) => {
+              if (v.key) obj[v.key] = parseValue(v);
+            });
+            return obj;
+          }
+        }
+        return null;
+      }
+
+      function resolvePath(sid, path) {
+        if (!path) return null;
+        const p = path.startsWith("/") ? path.substring(1) : path;
+        const parts = p.split("/");
+        let cur = appState.surfaces[sid].data;
+        for (const part of parts) {
+          if (cur == null) return null;
+          if (Array.isArray(cur) && !isNaN(parseInt(part))) {
+            cur = cur[parseInt(part)];
+          } else {
+            cur = cur[part];
+          }
+        }
+        return cur;
+      }
+
+      function joinPath(base, append) {
+        if (!base) return append;
+        if (append.startsWith("/")) return append;
+        const b = base.endsWith("/") ? base.slice(0, -1) : base;
+        return `${b}/${append}`;
+      }
+
+      // Recursive Component Renderer
+      function renderComponent(sid, cid, ctx) {
+        const s = appState.surfaces[sid];
+        const def = s.components[cid];
+        if (!def) return null;
+        const type = Object.keys(def.component)[0];
+        const props = def.component[type];
+        const el = document.createElement("div");
+        if (def.weight) el.style.flex = def.weight;
+
+        try {
+          switch (type) {
+            case "Column":
+              el.className = "a2ui-column";
+              if (props.alignment === "center") el.style.alignItems = "center";
+              renderChildren(sid, props.children, el, ctx);
+              break;
+            case "Row":
+              el.className = "a2ui-row";
+              if (props.alignment === "center") el.style.alignItems = "center";
+              renderChildren(sid, props.children, el, ctx);
+              break;
+            case "List":
+              el.className =
+                props.direction === "horizontal" ? "a2ui-row" : "a2ui-column";
+              renderChildren(sid, props.children, el, ctx);
+              break;
+            case "Card":
+              el.className = "a2ui-card";
+              if (props.child) {
+                const c = renderComponent(sid, props.child, ctx);
+                if (c) el.appendChild(c);
+              }
+              break;
+            case "Text":
+              const h = props.usageHint || "body";
+              el.className = `a2ui-text a2ui-text-${h}`;
+              let txt =
+                props.text.literalString ||
+                resolvePath(sid, joinPath(ctx, props.text.path));
+              el.innerHTML = parseMarkdownText(txt);
+              break;
+            case "Image":
+              const img = document.createElement("img");
+              img.className = "a2ui-image";
+              let url =
+                props.url.literalString ||
+                resolvePath(sid, joinPath(ctx, props.url.path));
+              img.src =
+                url || "https://via.placeholder.com/400x200?text=No+Image";
+              if (props.width) img.style.width = props.width;
+              el.appendChild(img);
+              break;
+            case "Checkbox":
+              el.className = "a2ui-checkbox-container";
+              el.style.display = "flex";
+              el.style.gap = "10px";
+              const chk = document.createElement("input");
+              chk.type = "checkbox";
+              chk.className = "a2ui-checkbox";
+              chk.value = props.value
+                ? props.value.literalString ||
+                  resolvePath(sid, joinPath(ctx, props.value.path))
+                : "";
+              const lblC = document.createElement("span");
+              lblC.textContent = props.label.literalString || "Select";
+              el.appendChild(chk);
+              el.appendChild(lblC);
+              break;
+            case "Button":
+              const btn = document.createElement("button");
+              btn.className = "a2ui-button";
+              if (props.primary) btn.classList.add("a2ui-button-primary");
+              if (props.child) {
+                const lbl = renderComponent(sid, props.child, ctx);
+                if (lbl) btn.textContent = lbl.textContent;
+              }
+              btn.onclick = () => {
+                const actionName = props.action?.name;
+
+                if (actionName === "book_restaurant") {
+                  // Transition to Booking Form
+                  const c = props.action.context || [];
+                  const g = (k) => {
+                    const f = c.find((x) => x.key === k);
+                    return f?.value?.path
+                      ? resolvePath(sid, joinPath(ctx, f.value.path))
+                      : "";
+                  };
+                  const d = {
+                    restaurantName: g("restaurantName"),
+                    imageUrl: g("imageUrl"),
+                    address: g("address"),
+                  };
+                  sendMessage(
+                    `DETAILS_JSON:${JSON.stringify(d)}`,
+                    "Loading Form...",
+                  );
+                } else if (actionName === "submit_booking") {
+                  // Submit Form Data
+                  const inputs = document.querySelectorAll(".a2ui-textfield");
+                  let details = [];
+                  // Gather inputs to text for the prompt context
+                  inputs.forEach((i) =>
+                    details.push(`${i.dataset.label}: ${i.value}`),
+                  );
+
+                  const rName = resolvePath(sid, "restaurantName");
+                  // Pass all data as JSON to robustly handle it on server
+                  const bookingData = {
+                    restaurantName: rName,
+                    partySize:
+                      resolvePath(sid, "partySize") ||
+                      document.querySelector("input[data-label='Party Size']")
+                        ?.value,
+                    reservationTime:
+                      resolvePath(sid, "reservationTime") ||
+                      document.querySelector("input[type='datetime-local']")
+                        ?.value,
+                    dietary:
+                      resolvePath(sid, "dietary") ||
+                      document.querySelector(
+                        "input[data-label='Dietary Requirements']",
+                      )?.value,
+                    imageUrl: resolvePath(sid, "imageUrl"),
+                  };
+
+                  // Using a special prefix to help routing/processing
+                  sendMessage(
+                    `BOOKING_SUBMIT_JSON:${JSON.stringify(bookingData)}`,
+                    "Submitting...",
+                  );
+                } else if (actionName === "add_events") {
+                  const checkboxes = document.querySelectorAll(
+                    ".a2ui-checkbox:checked",
+                  );
+                  const selectedEvents = [];
+                  checkboxes.forEach((c) => {
+                    try {
+                      selectedEvents.push(JSON.parse(c.value));
+                    } catch (e) {}
+                  });
+                  sendMessage(
+                    `Please add these events to calendar: ${JSON.stringify(selectedEvents)}`,
+                    "Adding...",
+                  );
+                } else if (actionName === "back_to_list") {
+                  // Basic history support could go here
+                }
+              };
+              el.appendChild(btn);
+              break;
+            case "TextField":
+            case "DateTimeInput":
+              const divT = document.createElement("div");
+              divT.style.marginBottom = "10px";
+              const lblT = document.createElement("label");
+              lblT.style.display = "block";
+              lblT.style.fontSize = "13px";
+              lblT.textContent = props.label.literalString;
+              const inpT = document.createElement("input");
+              inpT.className = "a2ui-textfield";
+              inpT.style.width = "100%";
+              inpT.style.padding = "8px";
+              inpT.style.borderRadius = "4px";
+              inpT.style.border = "1px solid #ccc";
+              inpT.type =
+                type === "TextField" ? props.type || "text" : "datetime-local";
+              inpT.dataset.label = lblT.textContent;
+              if (props.text?.path)
+                inpT.value =
+                  resolvePath(sid, joinPath(ctx, props.text.path)) || "";
+              divT.appendChild(lblT);
+              divT.appendChild(inpT);
+              return divT;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+        return el;
+      }
+
+      function renderChildren(sid, ch, el, ctx) {
+        if (!ch) return;
+        if (ch.explicitList) {
+          ch.explicitList.forEach((id) => {
+            const c = renderComponent(sid, id, ctx);
+            if (c) el.appendChild(c);
+          });
+        }
+        if (ch.template) {
+          const tmpl = ch.template;
+          const bindingPath = joinPath(ctx, tmpl.dataBinding);
+          const listData = resolvePath(sid, bindingPath);
+          if (
+            listData &&
+            (Array.isArray(listData) || typeof listData === "object")
+          ) {
+            const keys = Array.isArray(listData)
+              ? listData.map((_, i) => i.toString())
+              : Object.keys(listData);
+            keys.forEach((key) => {
+              const itemContext = joinPath(bindingPath, key);
+              const c = renderComponent(sid, tmpl.componentId, itemContext);
+              if (c) el.appendChild(c);
+            });
+          }
+        }
+      }
+    </script>
+  </body>
+</html>
